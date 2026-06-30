@@ -1,1 +1,0 @@
-# AutoSell - WA Bulk Sender
