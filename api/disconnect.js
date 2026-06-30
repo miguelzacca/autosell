@@ -1,5 +1,7 @@
 // api/disconnect.js — Logout + delete da instância
 
+import axios from 'axios';
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -22,10 +24,10 @@ export default async function handler(req, res) {
 
   try {
     // 1. Logout
-    await fetch(`${BASE}/instance/logout/${name}`, { method: 'DELETE', headers }).catch(() => {});
+    await axios.delete(`${BASE}/instance/logout/${name}`, { headers, validateStatus: () => true }).catch(() => {});
 
     // 2. Delete
-    await fetch(`${BASE}/instance/delete/${name}`, { method: 'DELETE', headers }).catch(() => {});
+    await axios.delete(`${BASE}/instance/delete/${name}`, { headers, validateStatus: () => true }).catch(() => {});
 
     return res.json({ success: true, message: 'Instância desconectada e deletada.' });
   } catch (err) {

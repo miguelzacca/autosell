@@ -1,5 +1,7 @@
 // api/personalize.js — IA personaliza 1 mensagem por contato (NVIDIA / llama-3.1-8b-instruct)
 
+import axios from 'axios';
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,7 +19,6 @@ export default async function handler(req, res) {
   const NVIDIA_KEY = process.env.NVIDIA_API_KEY;
   if (!NVIDIA_KEY) return res.status(500).json({ error: 'NVIDIA_API_KEY não configurada.' });
 
-  // Substitui variáveis no template antes de passar para a IA
   let preProcessed = template;
   if (contact) {
     preProcessed = preProcessed
@@ -25,7 +26,6 @@ export default async function handler(req, res) {
       .replace(/\{numero\}/gi, contact.number || contact.numero || '')
       .replace(/\{empresa\}/gi, contact.empresa || contact.company || '')
       .replace(/\{produto\}/gi, contact.produto || contact.product || '');
-    // Substitui qualquer outra coluna dinâmica do CSV
     Object.entries(contact).forEach(([key, val]) => {
       preProcessed = preProcessed.replace(new RegExp(`\\{${key}\\}`, 'gi'), val || '');
     });
@@ -43,44 +43,38 @@ Sua tarefa é REESCREVER a mensagem fornecida pelo usuário de forma única e na
 8. Mantenha o mesmo comprimento aproximado da mensagem original.`;
 
   try {
-    const response = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-      method: 'POST',
+    const response = await axios.post('https://integrate.api.nvidia.com/v1/chat/completions', {
+      model: 'meta/llama-3.1-8b-instruct',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Reescreva esta mensagem:\n\n${preProcessed}` },
+      ],
+      temperature: 0.85,
+      top_p: 0.9,
+      max_tokens: 512,
+    }, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${NVIDIA_KEY}`,
       },
-      body: JSON.stringify({
-        model: 'meta/llama-3.1-8b-instruct',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Reescreva esta mensagem:\n\n${preProcessed}` },
-        ],
-        temperature: 0.85,
-        top_p: 0.9,
-        max_tokens: 512,
-      }),
+      validateStatus: () => true,
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
+    if (response.status >= 400) {
+      const errText = JSON.stringify(response.data);
       console.error('[personalize] NVIDIA error:', errText);
-      // Fallback: retorna o template pré-processado sem personalização
       return res.json({ message: preProcessed, personalized: false });
     }
 
-    const data = await response.json();
+    const data = response.data;
     let msg = data?.choices?.[0]?.message?.content || preProcessed;
 
-    // Remove tags de thinking do DeepSeek se houver
     msg = msg.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-
-    // Remove aspas do início/fim se a IA colocou
     msg = msg.replace(/^["']|["']$/g, '').trim();
 
     return res.json({ message: msg, personalized: true });
   } catch (err) {
     console.error('[personalize]', err.message);
-    // Fallback gracioso — envia o template pré-processado
     return res.json({ message: preProcessed, personalized: false, fallback: true });
   }
 }

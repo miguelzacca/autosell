@@ -1,10 +1,12 @@
 // api/send.js — Envia 1 mensagem via Evolution API com typing indicator + delay
 
+import axios from 'axios';
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, apikey');
     return res.status(200).end();
   }
 
@@ -24,30 +26,29 @@ export default async function handler(req, res) {
 
   const headers = { 'Content-Type': 'application/json', 'apikey': KEY };
 
-  // Normaliza o número: remove tudo que não é dígito
-  const cleanNumber = String(number).replace(/\D/g, '');
-
-  // Calcula delay de "digitação" proporcional ao tamanho da msg (simula humano digitando)
-  // ~40 chars/seg de digitação humana média, entre 1.5s e 8s
+  let cleanNumber = String(number).replace(/\D/g, '');
+  if (cleanNumber.length === 10 || cleanNumber.length === 11) {
+    cleanNumber = '55' + cleanNumber;
+  }
+  
   const typingDelay = Math.min(8000, Math.max(1500, Math.floor(message.length / 40 * 1000)));
 
   try {
-    const r = await fetch(`${BASE}/message/sendText/${name}`, {
-      method: 'POST',
+    const r = await axios.post(`${BASE}/message/sendText/${name}`, {
+      number: cleanNumber,
+      text: message,
+      options: {
+        delay: typingDelay,
+        presence: 'composing',
+      },
+    }, {
       headers,
-      body: JSON.stringify({
-        number: cleanNumber,
-        text: message,
-        options: {
-          delay: typingDelay,       // Milliseconds of "composing" before sending
-          presence: 'composing',    // Shows "digitando..." no WA
-        },
-      }),
+      validateStatus: () => true, // resolve promise for all status codes
     });
 
-    if (!r.ok) {
-      const errBody = await r.json().catch(() => ({ message: r.statusText }));
-      console.error('[send] Evolution error:', errBody);
+    if (r.status >= 400) {
+      const errBody = r.data;
+      console.error('[send] Evolution error:', JSON.stringify(errBody, null, 2));
       return res.status(r.status).json({
         success: false,
         error: errBody?.message || errBody?.error || 'Erro ao enviar mensagem',
@@ -55,7 +56,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const data = await r.json();
+    const data = r.data;
     return res.json({
       success: true,
       messageId: data?.key?.id || data?.id,

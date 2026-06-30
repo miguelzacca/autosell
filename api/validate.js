@@ -1,6 +1,8 @@
 // api/validate.js — Valida lista de números via Evolution /chat/whatsappNumbers
 // Filtra números inválidos ou inexistentes no WhatsApp antes do disparo
 
+import axios from 'axios';
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -25,28 +27,36 @@ export default async function handler(req, res) {
   const headers = { 'Content-Type': 'application/json', 'apikey': KEY };
 
   try {
+    // Adiciona o DDI 55 se o número tiver 10 ou 11 dígitos (formato BR sem DDI)
+    const formattedNumbers = numbers.map(n => {
+      let clean = String(n).replace(/\D/g, '');
+      if (clean.length === 10 || clean.length === 11) return '55' + clean;
+      return clean;
+    });
+
     // Evolution API aceita até 50 números por vez
     const BATCH_SIZE = 50;
     const valid = [];
     const invalid = [];
 
-    for (let i = 0; i < numbers.length; i += BATCH_SIZE) {
-      const batch = numbers.slice(i, i + BATCH_SIZE);
+    for (let i = 0; i < formattedNumbers.length; i += BATCH_SIZE) {
+      const batch = formattedNumbers.slice(i, i + BATCH_SIZE);
 
       try {
-        const r = await fetch(`${BASE}/chat/whatsappNumbers/${name}`, {
-          method: 'POST',
+        const r = await axios.post(`${BASE}/chat/whatsappNumbers/${name}`, {
+          numbers: batch
+        }, {
           headers,
-          body: JSON.stringify({ numbers: batch }),
+          validateStatus: () => true,
         });
 
-        if (!r.ok) {
+        if (r.status >= 400) {
           // Se API retornar erro, assume todos como válidos (não bloqueia o disparo)
           batch.forEach(n => valid.push({ number: n, jid: n + '@s.whatsapp.net', valid: true }));
           continue;
         }
 
-        const data = await r.json();
+        const data = r.data;
         // Resposta: array de { number, jid, exists }
         if (Array.isArray(data)) {
           data.forEach(item => {

@@ -1,5 +1,7 @@
 // api/status.js — Polling do estado da instância
 
+import axios from 'axios';
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -19,14 +21,17 @@ export default async function handler(req, res) {
   const headers = { 'apikey': KEY };
 
   try {
-    const r = await fetch(`${BASE}/instance/connectionState/${instanceName}`, { headers });
+    const r = await axios.get(`${BASE}/instance/connectionState/${instanceName}`, { 
+      headers,
+      validateStatus: () => true 
+    });
 
-    if (!r.ok) {
+    if (r.status >= 400) {
       if (r.status === 404) return res.json({ status: 'not_found' });
       return res.status(r.status).json({ error: 'Erro ao buscar estado' });
     }
 
-    const data = await r.json();
+    const data = r.data;
     const state = data?.instance?.state || data?.state || 'unknown';
 
     if (state === 'open') {
@@ -35,9 +40,13 @@ export default async function handler(req, res) {
 
     if (state === 'connecting' || state === 'qrcode') {
       // Tenta refrescar o QR
-      const qrRes = await fetch(`${BASE}/instance/connect/${instanceName}`, { headers });
-      if (qrRes.ok) {
-        const qrData = await qrRes.json();
+      const qrRes = await axios.get(`${BASE}/instance/connect/${instanceName}`, { 
+        headers,
+        validateStatus: () => true 
+      });
+      
+      if (qrRes.status < 400) {
+        const qrData = qrRes.data;
         if (qrData?.base64) {
           return res.json({ status: 'qrcode', qrcode: qrData.base64 });
         }

@@ -1,5 +1,7 @@
 // api/connect.js — Cria/reconecta instância Evolution, retorna QR ou status connected
 
+import axios from 'axios';
+
 export default async function handler(req, res) {
   // CORS preflight
   if (req.method === 'OPTIONS') {
@@ -30,10 +32,10 @@ export default async function handler(req, res) {
 
   try {
     // 1. Verifica se instância já existe e qual o estado
-    const stateRes = await fetch(`${BASE}/instance/connectionState/${name}`, { headers });
+    const stateRes = await axios.get(`${BASE}/instance/connectionState/${name}`, { headers, validateStatus: () => true });
 
-    if (stateRes.ok) {
-      const stateData = await stateRes.json();
+    if (stateRes.status < 400) {
+      const stateData = stateRes.data;
       const state = stateData?.instance?.state || stateData?.state;
 
       if (state === 'open') {
@@ -41,9 +43,9 @@ export default async function handler(req, res) {
       }
 
       // Já existe mas não está conectada — tenta buscar QR
-      const connectRes = await fetch(`${BASE}/instance/connect/${name}`, { headers });
-      if (connectRes.ok) {
-        const connectData = await connectRes.json();
+      const connectRes = await axios.get(`${BASE}/instance/connect/${name}`, { headers, validateStatus: () => true });
+      if (connectRes.status < 400) {
+        const connectData = connectRes.data;
         if (connectData?.base64) {
           return res.status(200).json({ status: 'qrcode', qrcode: connectData.base64 });
         }
@@ -56,24 +58,23 @@ export default async function handler(req, res) {
     }
 
     // 2. Instância não existe — criar
-    const createRes = await fetch(`${BASE}/instance/create`, {
-      method: 'POST',
+    const createRes = await axios.post(`${BASE}/instance/create`, {
+      instanceName: name,
+      qrcode: true,
+      integration: 'WHATSAPP-BAILEYS',
+      reject_call: true,
+    }, {
       headers,
-      body: JSON.stringify({
-        instanceName: name,
-        qrcode: true,
-        integration: 'WHATSAPP-BAILEYS',
-        reject_call: true,
-      }),
+      validateStatus: () => true,
     });
 
-    if (!createRes.ok) {
-      const err = await createRes.text();
+    if (createRes.status >= 400) {
+      const err = JSON.stringify(createRes.data);
       console.error('[connect] create error:', err);
       return res.status(500).json({ error: 'Erro ao criar instância: ' + err });
     }
 
-    const createData = await createRes.json();
+    const createData = createRes.data;
 
     // Pode retornar o QR direto na criação
     const qrBase64 = createData?.qrcode?.base64 || createData?.base64;
@@ -82,9 +83,9 @@ export default async function handler(req, res) {
     }
 
     // Se não veio QR, faz connect explícito
-    const connectRes2 = await fetch(`${BASE}/instance/connect/${name}`, { headers });
-    if (connectRes2.ok) {
-      const connectData2 = await connectRes2.json();
+    const connectRes2 = await axios.get(`${BASE}/instance/connect/${name}`, { headers, validateStatus: () => true });
+    if (connectRes2.status < 400) {
+      const connectData2 = connectRes2.data;
       if (connectData2?.base64) {
         return res.status(200).json({ status: 'qrcode', qrcode: connectData2.base64 });
       }
