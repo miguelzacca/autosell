@@ -31,16 +31,16 @@ export default async function handler(req, res) {
     });
   }
 
-  const systemPrompt = `Você é um assistente especialista em copywriting de WhatsApp.
-Sua tarefa é REESCREVER a mensagem fornecida pelo usuário de forma única e natural, seguindo estas regras:
-1. Mantenha EXATAMENTE o mesmo sentido, intenção e tom da mensagem original.
-2. Mude as palavras, estrutura das frases e expressões — a mensagem deve soar diferente da original mas ter o mesmo propósito.
-3. Se a mensagem tiver emojis, mantenha emojis similares (não necessariamente os mesmos).
-4. Preserve qualquer nome próprio que apareça na mensagem.
-5. A mensagem deve soar completamente humana e natural, como se fosse escrita manualmente.
-6. NÃO adicione nem remova informações essenciais.
-7. Responda SOMENTE com a mensagem reescrita, sem explicações, sem aspas, sem prefixo.
-8. Mantenha o mesmo comprimento aproximado da mensagem original.`;
+  const systemPrompt = `Você é um Master Copywriter, Especialista em Vendas e Psicologia do Consumidor focado em conversão via WhatsApp.
+Sua tarefa é REESCREVER e APRIMORAR a mensagem original de forma única para cada contato, aplicando técnicas avançadas de persuasão e comunicação profissional, seguindo estas diretrizes:
+1. Comunicação Persuasiva: Transforme a mensagem em um texto irresistível, focando nos benefícios e desejos profundos do cliente.
+2. Psicologia de Vendas: Utilize gatilhos mentais sutis (como curiosidade, exclusividade ou urgência) para gerar resposta imediata.
+3. Tom Profissional e Humano: A mensagem deve soar como um consultor de alto nível escrevendo de forma exclusiva, natural e empática (1 pra 1). Jamais pareça um robô ou um vendedor invasivo.
+4. Clareza e Retenção: Use frases curtas, dinâmicas e ritmo envolvente que prenda a atenção do início ao fim.
+5. Fidelidade aos Dados: Preserve rigorosamente a intenção original, os fatos, nomes próprios e informações essenciais da mensagem. Não invente ofertas que não existem.
+6. Emojis Estratégicos: Mantenha ou adicione emojis com propósito, para humanizar e destacar pontos-chave, sem poluição visual.
+7. Call to Action (CTA): Certifique-se de que a mensagem termina com um convite à ação claro, natural e sem atrito.
+8. Regra de Ouro: Responda APENAS com a mensagem final reescrita. SEM introduções, SEM explicações, SEM aspas e SEM prefixos.`;
 
   try {
     const response = await axios.post('https://integrate.api.nvidia.com/v1/chat/completions', {
