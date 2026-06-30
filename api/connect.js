@@ -94,6 +94,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ status: 'connecting' });
   } catch (err) {
     console.error('[connect] exception:', err.message);
-    return res.status(500).json({ error: 'Falha de conexão: ' + err.message });
+    return res.status(500).json({ error: 'Falha de conexão (' + BASE + '): ' + err.message });
   }
 }
