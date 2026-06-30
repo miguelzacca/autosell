@@ -1107,6 +1107,12 @@
                 >Escreva o template acima para ver o preview...</span
               >
             </div>
+            <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
+              <button class="btn btn-ghost btn-sm" id="btn-test-ai">
+                🧪 Testar IA Real (Reescrita)
+              </button>
+              <span style="font-size: 11px; color: var(--text2);">Gera uma prévia real usando a IA (llama-3.1-8b).</span>
+            </div>
           </div>
 
           <div class="alert alert-info" style="margin: 0">
@@ -1732,6 +1738,48 @@
       }
 
       templateInput.addEventListener('input', updatePreview)
+
+      document.getElementById('btn-test-ai').addEventListener('click', async () => {
+        const tpl = templateInput.value.trim();
+        if (!tpl) {
+          alert('Escreva o template da mensagem primeiro.');
+          return;
+        }
+        
+        const btn = document.getElementById('btn-test-ai');
+        const origText = btn.innerHTML;
+        btn.innerHTML = '⏳ Gerando...';
+        btn.disabled = true;
+        
+        try {
+          const firstContact = state.contacts[0] || {
+            name: 'João Silva',
+            number: '5511999991111',
+            empresa: 'Imobiliária ABC',
+            produto: 'imóvel',
+          };
+          
+          templatePreview.innerHTML = '<span style="color:var(--warn)">Aguarde, a IA está reescrevendo a mensagem...</span>';
+          
+          const res = await fetch('/api/personalize', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ template: tpl, contact: firstContact }),
+          });
+          
+          const data = await res.json();
+          if (data.message) {
+            templatePreview.innerHTML = `<strong>🤖 IA reescreveu assim (Preview Real):</strong><br><br>${data.message.replace(/\\n/g, '<br>')}`;
+          } else {
+            templatePreview.innerHTML = `<span style="color:var(--danger)">Erro ao gerar com IA.</span>`;
+          }
+        } catch (e) {
+          templatePreview.innerHTML = `<span style="color:var(--danger)">Erro: ${e.message}</span>`;
+        } finally {
+          btn.innerHTML = origText;
+          btn.disabled = false;
+        }
+      });
 
       document
         .getElementById('btn-next-template')
