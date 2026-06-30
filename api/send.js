@@ -36,11 +36,7 @@ export default async function handler(req, res) {
   try {
     const r = await axios.post(`${BASE}/message/sendText/${name}`, {
       number: cleanNumber,
-      text: message,
-      options: {
-        delay: typingDelay,
-        presence: 'composing',
-      },
+      text: message
     }, {
       headers,
       validateStatus: () => true, // resolve promise for all status codes
