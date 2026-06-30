@@ -11,8 +11,8 @@ export default async function handler(req, res) {
   }
 
   const instanceName = req.query.instance || req.body?.instanceName || 'autosell';
-  const BASE = (process.env.EVOLUTION_API_URL || '').replace(/\/$/, '');
-  const KEY = process.env.EVOLUTION_API_KEY;
+  const BASE = (process.env.EVOLUTION_API_URL || '').replace(/[\r\n"']/g, '').replace(/\/$/, '');
+  const KEY = (process.env.EVOLUTION_API_KEY || '').replace(/[\r\n"']/g, '');
 
   if (!BASE || !KEY) {
     return res.status(500).json({ error: 'Evolution API não configurada.' });
